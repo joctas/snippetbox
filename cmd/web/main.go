@@ -7,12 +7,15 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/joctas/snippetbox/internal/models"
+
 	_ "github.com/go-sql-driver/mysql" // _ because it will never be directly used
 )
 
 // dependency injection
 type application struct {
 	logger *slog.Logger
+	snippets *models.SnippetModel
 }
 
 func main() {
@@ -34,6 +37,7 @@ func main() {
 
 	app := &application{
 		logger: logger,
+		snippets: &models.SnippetModel{DB: db},
 	}
 
 	// server
