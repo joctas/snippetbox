@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/joctas/snippetbox/internal/models"
 )
@@ -50,37 +52,77 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
 	data := app.newTemplateData(r)
 
+	data.Form = SnippetCreateForm{
+		Expires: 365,
+	}
+
 	app.render(w, r, http.StatusOK, "create.tmpl", data)
 }
 
+// Define a snippetCreateForm struct to represent the form data and validation
+// errors for the form fields. Note that all the struct fields are deliberately
+// exported (i.e. start with a capital letter). This is because struct fields
+// must be exported in order to be read by the html/template package when
+// rendering the template.
+type SnippetCreateForm struct {
+	Title       string
+	Content     string
+	Expires     int
+	FieldErrors map[string]string
+}
+
 func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request) {
-	// First we call r.ParseForm() which adds any data in POST request bodies
-	// to the r.PostForm map. This also works in the same way for PUT and PATCH
-	// requests. If there are any errors, we use our app.ClientError() helper to
-	// send a 400 Bad Request response to the user.
 	err := r.ParseForm()
 	if err != nil {
 		app.clientError(w, http.StatusBadRequest)
 		return
 	}
 
-	// Use the r.PostForm.Get() method to retrieve the title and content
-	// from the r.PostForm map.
-	title := r.PostForm.Get("title")
-	content := r.PostForm.Get("content")
-
-	// The r.PostForm.Get() method always returns the form data as a *string*.
-	// However, we're expecting our expires value to be a number, and want to
-	// represent it in our Go code as an integer. So we need to manually covert
-	// the form data to an integer using strconv.Atoi(), and we send a 400 Bad
-	// Request response if the conversion fails.
 	expires, err := strconv.Atoi(r.PostForm.Get("expires"))
 	if err != nil {
 		app.clientError(w, http.StatusBadRequest)
 		return
 	}
 
-	id, err := app.snippets.Insert(title, content, expires)
+	form := SnippetCreateForm{
+		Title:       r.PostForm.Get("title"),
+		Content:     r.PostForm.Get("content"),
+		Expires:     expires,
+		FieldErrors: map[string]string{},
+	}
+
+	// validation
+
+	// Update the validation checks so that they operate on the snippetCreateForm
+	// instance.
+	if strings.TrimSpace(form.Title) == "" {
+		form.FieldErrors["title"] = "This field cannot be blank"
+	} else if utf8.RuneCountInString(form.Title) > 100 {
+		form.FieldErrors["title"] = "This field cannot be more than 100 characters long"
+	}
+
+	if strings.TrimSpace(form.Content) == "" {
+		form.FieldErrors["content"] = "This field cannot be blank"
+	}
+
+	if form.Expires != 1 && form.Expires != 7 && form.Expires != 365 {
+		form.FieldErrors["expires"] = "This field must equal 1, 7 or 365"
+	}
+
+	// If there are any validation errors, then re-display the create.tmpl template,
+	// passing in the snippetCreateForm instance as dynamic data in the Form
+	// field. Note that we use the HTTP status code 422 Unprocessable Entity
+	// when sending the response to indicate that there was a validation error.
+	if len(form.FieldErrors) > 0 {
+		data := app.newTemplateData(r)
+		data.Form = form
+		app.render(w, r, http.StatusUnprocessableEntity, "create.tmpl", data)
+		return
+	}
+
+	// insert
+
+	id, err := app.snippets.Insert(form.Title, form.Content, form.Expires)
 	if err != nil {
 		app.serverError(w, r, err)
 		return
