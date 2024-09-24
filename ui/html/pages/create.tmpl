@@ -29,8 +29,8 @@ empty. -->
         <label class='error'>{{.}}</label>
         {{end}}
         <!-- Here we use the `if` action to check if the value of the re-populated
-expires field equals 365. If it does, then we render the `checked`
-attribute so that the radio input is re-selected. -->
+        expires field equals 365. If it does, then we render the `checked`
+        attribute so that the radio input is re-selected. -->
         <input type='radio' name='expires' value='365' {{if (eq .Form.Expires 365)}}checked{{end}}> One Year
         <!-- And we do the same for the other possible values too... -->
         <input type='radio' name='expires' value='7' {{if (eq .Form.Expires 7)}}checked{{end}}> One Week
