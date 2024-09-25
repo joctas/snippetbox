@@ -51,7 +51,7 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
 	data := app.newTemplateData(r)
 
-	data.Form = SnippetCreateForm{
+	data.Form = snippetCreateForm{
 		Expires: 365,
 	}
 
@@ -63,30 +63,25 @@ func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
 // exported (i.e. start with a capital letter). This is because struct fields
 // must be exported in order to be read by the html/template package when
 // rendering the template.
-type SnippetCreateForm struct {
-	Title   string
-	Content string
-	Expires int
-	validator.Validator
+type snippetCreateForm struct {
+	Title               string `form:"title"`
+	Content             string `form:"content"`
+	Expires             int    `form:"expires"`
+	validator.Validator `form:"-"`
 }
 
 func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
+	// Declare a new empty instance of the snippetCreateForm struct.
+	var form snippetCreateForm
+
+	// Call the Decode() method of the form decoder, passing in the current
+	// request and *a pointer* to our snippetCreateForm struct. This will
+	// essentially fill our struct with the relevant values from the HTML form.
+	// If there is a problem, we return a 400 Bad Request response to the client.
+	err := app.decodePostForm(r, &form)
 	if err != nil {
 		app.clientError(w, http.StatusBadRequest)
 		return
-	}
-
-	expires, err := strconv.Atoi(r.PostForm.Get("expires"))
-	if err != nil {
-		app.clientError(w, http.StatusBadRequest)
-		return
-	}
-
-	form := SnippetCreateForm{
-		Title:   r.PostForm.Get("title"),
-		Content: r.PostForm.Get("content"),
-		Expires: expires,
 	}
 
 	// validation
