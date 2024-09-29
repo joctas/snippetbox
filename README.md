@@ -2,6 +2,8 @@
 
 A web app made to organize snippets.
 
+Project made using **only** the standard library.
+
 ## The project includes, among other things:
 
 * A custom logger for writing structured log entries
@@ -17,4 +19,4 @@ A web app made to organize snippets.
 * File embedding
 * Testing
 
-> Project based on the book [Let's go](https://lets-go.alexedwards.net/) by by Alex Edwards.
+> Project based on the book [Let's go](https://lets-go.alexedwards.net/) by Alex Edwards.
